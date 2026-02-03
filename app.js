@@ -1,12 +1,16 @@
 /*
   app.js
-  BI Educativo - Versión final estable para GitHub Pages
-  -----------------------------------------------------
-  - Carga CSV
-  - Limpieza de datos
-  - KPIs
-  - Gráficos
-  - Exportación CSV limpio
+  =========================================================
+  BI Educativo - Ventas
+  ---------------------------------------------------------
+  ✔ Carga CSV (GitHub Pages friendly)
+  ✔ Limpieza automática de datos
+  ✔ KPIs claros
+  ✔ Gráficos mejorados (Chart.js)
+  ✔ Tablas RAW y LIMPIAS
+  ✔ Exportación CSV limpio
+  ✔ Código comentado y didáctico
+  =========================================================
 */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,9 +21,9 @@ let rawData = [];
 let cleanData = [];
 let charts = [];
 
-/* ==========================
+/* =========================================================
    CARGA DEL CSV
-========================== */
+========================================================= */
 function cargarCSV() {
   fetch('ventas_raw.csv')
     .then(res => {
@@ -42,9 +46,9 @@ function cargarCSV() {
     });
 }
 
-/* ==========================
-   PARSE CSV
-========================== */
+/* =========================================================
+   PARSEO CSV
+========================================================= */
 function parseCSV(text) {
   const lines = text.trim().split('\n');
   const headers = lines.shift().split(',');
@@ -59,24 +63,28 @@ function parseCSV(text) {
   });
 }
 
-/* ==========================
-   LIMPIEZA DE DATOS
-========================== */
+/* =========================================================
+   LIMPIEZA DE DATOS (ETL)
+========================================================= */
 function limpiarDatos(data) {
   let salida = [];
 
   data.forEach(row => {
+    // Fecha válida
     const fecha = new Date(row.fecha);
     if (isNaN(fecha)) return;
 
+    // Producto
     if (!row.producto) return;
     const producto = row.producto.trim().toLowerCase();
 
+    // Franja
     let franja = row.franja.toLowerCase();
     if (franja.includes('des')) franja = 'Desayuno';
     else if (franja.includes('com')) franja = 'Comida';
     else return;
 
+    // Familia
     let familia = row.familia.toLowerCase();
     if (familia.startsWith('beb')) familia = 'Bebida';
     else if (familia.startsWith('ent')) familia = 'Entrante';
@@ -84,10 +92,12 @@ function limpiarDatos(data) {
     else if (familia.startsWith('pos')) familia = 'Postre';
     else return;
 
+    // Unidades y precio
     const unidades = Number(row.unidades);
     const precio = Number(row.precio_unitario);
     if (unidades <= 0 || precio <= 0) return;
 
+    // Registro limpio
     salida.push({
       fecha: fecha.toISOString().split('T')[0],
       franja,
@@ -109,17 +119,17 @@ function limpiarDatos(data) {
   });
 }
 
-/* ==========================
-   CONTADOR
-========================== */
+/* =========================================================
+   CONTADOR DE FILAS
+========================================================= */
 function mostrarContador() {
   document.getElementById('contadorFilas').innerText =
     `Filas RAW: ${rawData.length} | Filas limpias: ${cleanData.length}`;
 }
 
-/* ==========================
+/* =========================================================
    TABLAS
-========================== */
+========================================================= */
 function crearTabla(data) {
   if (data.length === 0) return '<p>No hay datos</p>';
 
@@ -142,9 +152,9 @@ function mostrarTablas() {
   document.getElementById('tablaClean').innerHTML = crearTabla(cleanData);
 }
 
-/* ==========================
+/* =========================================================
    KPIs
-========================== */
+========================================================= */
 function calcularKPIs() {
   let totalVentas = 0;
   let totalUnidades = 0;
@@ -155,26 +165,28 @@ function calcularKPIs() {
   cleanData.forEach(r => {
     totalVentas += r.importe;
     totalUnidades += r.unidades;
+
     porProducto[r.producto] = (porProducto[r.producto] || 0) + r.importe;
     porFranja[r.franja] = (porFranja[r.franja] || 0) + r.importe;
     porFamilia[r.familia] = (porFamilia[r.familia] || 0) + r.importe;
   });
 
   document.getElementById('kpis').innerHTML = `
-    <div class="kpi">Ventas (€): ${totalVentas.toFixed(2)}</div>
-    <div class="kpi">Unidades: ${totalUnidades}</div>
+    <div class="kpi">Ventas totales (€): ${totalVentas.toFixed(2)}</div>
+    <div class="kpi">Unidades totales: ${totalUnidades}</div>
   `;
 
   window.kpiData = { porProducto, porFranja, porFamilia };
 }
 
-/* ==========================
-   GRÁFICOS
-========================== */
+/* =========================================================
+   GRÁFICOS (MEJORADOS)
+========================================================= */
 function crearGraficos() {
   charts.forEach(c => c.destroy());
   charts = [];
 
+  /* ---- TOP 5 PRODUCTOS (BARRAS HORIZONTALES) ---- */
   const topProductos = Object.entries(kpiData.porProducto)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
@@ -185,35 +197,100 @@ function crearGraficos() {
       labels: topProductos.map(p => p[0]),
       datasets: [{
         label: 'Importe (€)',
-        data: topProductos.map(p => p[1])
+        data: topProductos.map(p => p[1]),
+        backgroundColor: '#4e79a7'
       }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        title: {
+          display: true,
+          text: 'Top 5 productos por ventas (€)'
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.raw.toFixed(2)} €`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            callback: value => value + ' €'
+          }
+        }
+      }
     }
   }));
 
+  /* ---- VENTAS POR FRANJA (DONUT) ---- */
   charts.push(new Chart(chartFranja, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
       labels: Object.keys(kpiData.porFranja),
       datasets: [{
-        data: Object.values(kpiData.porFranja)
+        data: Object.values(kpiData.porFranja),
+        backgroundColor: ['#59a14f', '#f28e2b']
       }]
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: 'Distribución de ventas por franja'
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.label}: ${ctx.raw.toFixed(2)} €`
+          }
+        }
+      }
     }
   }));
 
+  /* ---- VENTAS POR FAMILIA (BARRAS) ---- */
   charts.push(new Chart(chartFamilia, {
-    type: 'pie',
+    type: 'bar',
     data: {
       labels: Object.keys(kpiData.porFamilia),
       datasets: [{
-        data: Object.values(kpiData.porFamilia)
+        label: 'Ventas (€)',
+        data: Object.values(kpiData.porFamilia),
+        backgroundColor: [
+          '#76b7b2',
+          '#edc949',
+          '#e15759',
+          '#af7aa1'
+        ]
       }]
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: 'Ventas por familia de producto'
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.raw.toFixed(2)} €`
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: value => value + ' €'
+          }
+        }
+      }
     }
   }));
 }
 
-/* ==========================
+/* =========================================================
    DESCARGA CSV LIMPIO
-========================== */
+========================================================= */
 document.getElementById('downloadBtn').addEventListener('click', () => {
   let csv = 'fecha,franja,producto,familia,unidades,precio_unitario,importe\n';
 
