@@ -1,6 +1,4 @@
-/*
-  app.js
-  BI Educativo - Versión corregida para GitHub Pages
+
 */
 
 document.addEventListener('DOMContentLoaded', () => {
