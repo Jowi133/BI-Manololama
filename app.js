@@ -1,4 +1,6 @@
-
+/*
+  app.js
+  BI Educativo - FIX DEFINITIVO GitHub Pages
 */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,7 +11,7 @@ let rawData = [];
 let cleanData = [];
 
 function cargarCSV() {
-  fetch('./ventas_raw.csv')
+  fetch('ventas_raw.csv') // 🔴 ESTA es la clave
     .then(response => {
       if (!response.ok) {
         throw new Error('No se pudo cargar ventas_raw.csv');
@@ -18,7 +20,7 @@ function cargarCSV() {
     })
     .then(text => {
       rawData = parseCSV(text);
-      cleanData = cleanDataFunction(rawData);
+      cleanData = limpiarDatos(rawData);
 
       mostrarContador();
       mostrarTablas();
@@ -26,14 +28,20 @@ function cargarCSV() {
       crearGraficos();
     })
     .catch(error => {
-      alert('ERROR: El archivo ventas_raw.csv no se encuentra en la carpeta raíz');
+      document.body.insertAdjacentHTML(
+        'afterbegin',
+        `<p style="color:red;font-weight:bold">
+          ERROR: No se pudo cargar ventas_raw.csv<br>
+          Comprueba que está en la misma carpeta que index.html
+        </p>`
+      );
       console.error(error);
     });
 }
 
-/* =========================
+/* ======================
    PARSE CSV
-========================= */
+====================== */
 function parseCSV(text) {
   const lines = text.trim().split('\n');
   const headers = lines.shift().split(',');
@@ -48,11 +56,11 @@ function parseCSV(text) {
   });
 }
 
-/* =========================
+/* ======================
    LIMPIEZA
-========================= */
-function cleanDataFunction(data) {
-  let result = [];
+====================== */
+function limpiarDatos(data) {
+  let salida = [];
 
   data.forEach(row => {
     const fecha = new Date(row.fecha);
@@ -77,7 +85,7 @@ function cleanDataFunction(data) {
     const precio = Number(row.precio_unitario);
     if (unidades <= 0 || precio <= 0) return;
 
-    result.push({
+    salida.push({
       fecha: fecha.toISOString().split('T')[0],
       franja,
       producto,
@@ -89,26 +97,26 @@ function cleanDataFunction(data) {
   });
 
   // eliminar duplicados exactos
-  const seen = new Set();
-  return result.filter(r => {
+  const vistos = new Set();
+  return salida.filter(r => {
     const key = JSON.stringify(r);
-    if (seen.has(key)) return false;
-    seen.add(key);
+    if (vistos.has(key)) return false;
+    vistos.add(key);
     return true;
   });
 }
 
-/* =========================
+/* ======================
    CONTADOR
-========================= */
+====================== */
 function mostrarContador() {
   document.getElementById('contadorFilas').innerText =
     `Filas RAW: ${rawData.length} | Filas limpias: ${cleanData.length}`;
 }
 
-/* =========================
+/* ======================
    TABLAS
-========================= */
+====================== */
 function crearTabla(data) {
   if (data.length === 0) return '<p>No hay datos</p>';
 
@@ -131,9 +139,9 @@ function mostrarTablas() {
   document.getElementById('tablaClean').innerHTML = crearTabla(cleanData);
 }
 
-/* =========================
+/* ======================
    KPIs
-========================= */
+====================== */
 function calcularKPIs() {
   let totalVentas = 0;
   let totalUnidades = 0;
@@ -157,24 +165,19 @@ function calcularKPIs() {
   window.kpiData = { porProducto, porFranja, porFamilia };
 }
 
-/* =========================
+/* ======================
    GRÁFICOS
-========================= */
+====================== */
 function crearGraficos() {
-  if (!window.kpiData) return;
-
-  const topProductos = Object.entries(kpiData.porProducto)
+  const top = Object.entries(kpiData.porProducto)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
   new Chart(document.getElementById('chartProductos'), {
     type: 'bar',
     data: {
-      labels: topProductos.map(p => p[0]),
-      datasets: [{
-        label: 'Importe (€)',
-        data: topProductos.map(p => p[1])
-      }]
+      labels: top.map(p => p[0]),
+      datasets: [{ label: '€', data: top.map(p => p[1]) }]
     }
   });
 
